@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Report Dashboard</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --surface: #13161f;
+      --surface2: #1c2030;
+      --border: #252a3a;
+      --accent: #4f8ef7;
+      --accent2: #7c5cfc;
+      --green: #2ecc8a;
+      --amber: #f5a623;
+      --red: #f74f6a;
+      --text: #e8ecf5;
+      --muted: #6b7490;
+      --tag: #1e2540;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: linear-gradient(rgba(79, 142, 247, .03)1px, transparent 1px), linear-gradient(90deg, rgba(79, 142, 247, .03)1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0
+    }
+
+    .wrap {
+      position: relative;
+      z-index: 1;
+      padding: 0 20px 60px
+    }
+
+    header {
+      padding: 28px 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      flex-shrink: 0;
+      box-shadow: 0 0 20px rgba(79, 142, 247, .3)
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -.5px
+    }
+
+    h1 span {
+      color: var(--accent)
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 26px;
+      margin-bottom: 20px;
+      transition: border-color .2s
+    }
+
+    .card:focus-within {
+      border-color: var(--accent)
+    }
+
+    .card-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .card-label::before {
+      content: '//';
+      color: var(--accent)
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .upload-left {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      min-width: 260px;
+    }
+
+    .upload-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      background: var(--surface2);
+      border: 1px dashed var(--border);
+      border-radius: 9px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      transition: all .2s
+    }
+
+    .upload-label:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    input[type=file] {
+      display: none
+    }
+
+    #fileNameDisplay {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 6px;
+      font-family: 'DM Mono', monospace;
+      min-height: 16px
+    }
+
+    .sheet-picker {
+      display: none;
+      align-items: center;
+      gap: 9px;
+      margin-top: 12px;
+      flex-wrap: wrap
+    }
+
+    .sheet-picker label {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .hint {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.7
+    }
+
+    .hint strong {
+      color: var(--amber)
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 9px;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .18s;
+      white-space: nowrap
+    }
+
+    .btn-sm {
+      padding: 7px 13px;
+      font-size: 12px
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text)
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent)
+    }
+
+    .btn-export {
+      background: rgba(46, 204, 138, .1);
+      border: 1px solid rgba(46, 204, 138, .3);
+      color: var(--green);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 7px 13px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .btn-export:hover {
+      background: rgba(46, 204, 138, .18)
+    }
+
+    .btn-nav-summary {
+      background: rgba(245, 166, 35, .10);
+      border: 1px solid rgba(245, 166, 35, .35);
+      color: var(--amber);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 9px 14px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-nav-summary:hover {
+      background: rgba(245, 166, 35, .16);
+      transform: translateY(-1px);
+    }
+
+    .btn-nav-summary.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(79, 142, 247, .10);
+    }
+
+    select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      outline: none;
+      cursor: pointer
+    }
+
+    select:focus {
+      border-color: var(--accent)
+    }
+
+    select option {
+      background: var(--surface2)
+    }
+
+    input[type=date] {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      cursor: pointer
+    }
+
+    input[type=date]:focus {
+      border-color: var(--accent)
+    }
+
+    .filters-bar {
+      display: flex;
+      gap: 9px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: flex-end
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 3px
+    }
+
+    .fl {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 9px;
+      margin-bottom: 20px
+    }
+
+    .sc {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 12px 16px;
+      position: relative;
+      overflow: hidden
+    }
+
+    .sc::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: .6
+    }
+
+    .sl {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 5px
+    }
+
+    .sv {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800
+    }
+
+    .ss {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px
+    }
+
+    .error-box {
+      background: rgba(247, 79, 106, .08);
+      border: 1px solid rgba(247, 79, 106, .25);
+      border-radius: 11px;
+      padding: 13px 17px;
+      color: var(--red);
+      font-size: 12px;
+      margin-bottom: 16px;
+      display: none;
+      gap: 9px;
+      align-items: flex-start;
+      white-space: pre-wrap;
+      word-break: break-all
+    }
+
+    .tbl-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden
+    }
+
+    .tbl-top {
+      padding: 13px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap
+    }
+
+    .tbl-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px
+    }
+
+    .rec-count {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      background: var(--tag);
+      padding: 2px 9px;
+      border-radius: 20px
+    }
+
+    .formula-note {
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .formula-note span {
+      color: var(--accent)
+    }
+
+    .tbl-scroll {
+      overflow-x: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    thead tr.grp-row th {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      padding: 5px 8px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap
+    }
+
+    .grp-sheet {
+      background: #171b28;
+      color: #7788aa
+    }
+
+    .grp-calc {
+      background: rgba(79, 142, 247, .1);
+      color: var(--accent)
+    }
+
+    thead tr.col-row th {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: .9px;
+      color: var(--muted);
+      padding: 7px 9px;
+      text-align: left;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(37, 42, 58, .5);
+      transition: background .1s
+    }
+
+    tbody tr:last-child {
+      border-bottom: none
+    }
+
+    tbody tr:hover {
+      background: rgba(79, 142, 247, .04)
+    }
+
+    td {
+      padding: 8px 9px;
+      white-space: nowrap;
+      font-size: 12px;
+      vertical-align: middle
+    }
+
+    td.num {
+      text-align: right;
+      font-family: 'DM Mono', monospace
+    }
+
+    td.calc {
+      text-align: right;
+      font-family: 'DM Mono', monospace;
+      background: rgba(79, 142, 247, .04);
+      font-weight: 600;
+      color: var(--accent)
+    }
+
+    td.process-col {
+      white-space: normal;
+      min-width: 280px;
+      max-width: 460px;
+      line-height: 1.45;
+      word-break: break-word
+    }
+
+    .date-sep td {
+      background: linear-gradient(90deg, rgba(79, 142, 247, .09), transparent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 11px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 70px 24px;
+      gap: 10px
+    }
+
+    .state-icon {
+      font-size: 44px;
+      opacity: .35
+    }
+
+    .state-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      opacity: .55
+    }
+
+    .state-sub {
+      font-size: 12px;
+      text-align: center;
+      max-width: 380px;
+      line-height: 1.6;
+      color: var(--muted)
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header>
+      <div class="logo">📊</div>
+      <div>
+        <h1>Daily Report <span>Dashboard</span></h1>
+        <div class="subtitle">Employee productivity · Upload Excel file + extra calculated columns</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="card-label">Excel File Upload</div>
+
+      <div class="upload-row">
+        <div class="upload-left">
+          <label class="upload-label">
+            📂 Choose Excel File (.xlsx / .xls)
+            <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="loadFromFile(this)" />
+          </label>
+        </div>
+
+        <div class="upload-actions">
+          <button id="btnSummaryNav" class="btn-nav-summary" onclick="toggleSummaryView()" disabled>
+            🧾 Summary Report
+          </button>
+
+          <button id="btnSummaryDownload" class="btn-export" onclick="exportSummaryCSV(buildNameSummaryRows(currentFiltered))" style="display:none">
+            ⬇ Download Summary
+          </button>
+
+          <!-- ✅ NEW: Final Report Download (red area button) -->
+          <button id="btnFinalDownload" class="btn-export"
+            onclick="exportFinalCSV(buildFinalReportRows(currentFiltered))"
+            style="display:none">
+            ⬇ Download Final Report
+          </button>
+        </div>
+      </div>
+
+      <div id="fileNameDisplay"></div>
+
+      <div class="sheet-picker" id="sheetPicker">
+        <label>Sheet:</label>
+        <select id="sheetSelect" onchange="loadSheet()"></select>
+      </div>
+
+      <div class="hint">
+        Upload your Excel file. It will fetch these columns exactly:<br />
+        <strong>Date, Name, Process, UOM, TAT / Hour, Target, Count, Working Hours, Notes, Leave Report</strong>.<br />
+        Calculated columns add <strong>Hours</strong> (= Count ÷ TAT/Hour, or Working Hours if Count/TAT is empty/0) and
+        <strong>Min Hours Cal</strong> (= Min(Hours, Working Hours)).
+      </div>
+    </div>
+
+    <div class="error-box" id="errorBox"><span>⛔</span><span id="errorMsg"></span></div>
+
+    <div class="filters-bar" id="filtersBar" style="display:none">
+      <div class="fg">
+        <div class="fl">Employee</div>
+        <select id="fName" onchange="applyFilters()">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div class="fg">
+        <div class="fl">From Date</div><input type="date" id="fFrom" onchange="applyFilters()" />
+      </div>
+      <div class="fg">
+        <div class="fl">To Date</div><input type="date" id="fTo" onchange="applyFilters()" />
+      </div>
+      <div class="fg">
+        <div class="fl">Process</div>
+        <select id="fProcess" onchange="applyFilters()">
+          <option value="">All</option>
+        </select>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="clearFilters()">Clear</button>
+      <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+      <button id="btnExportSummary2" class="btn-export" onclick="exportSummaryCSV(buildNameSummaryRows(currentFiltered))" style="display:none">
+        ⬇ Export Summary CSV
+      </button>
+    </div>
+
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="sc">
+        <div class="sl">Records</div>
+        <div class="sv" id="sTotal">0</div>
+        <div class="ss">rows</div>
+      </div>
+      <div class="sc">
+        <div class="sl">Employees</div>
+        <div class="sv" id="sEmp">0</div>
+        <div class="ss">unique</div>
+      </div>
+      <div class="sc">
+        <div class="sl">Total Count</div>
+        <div class="sv" id="sCount">0</div>
+        <div class="ss">units</div>
+      </div>
+      <div class="sc">
+        <div class="sl">Avg Hours</div>
+        <div class="sv" id="sAvgH">0</div>
+        <div class="ss">calculated</div>
+      </div>
+      <div class="sc">
+        <div class="sl">Avg Min Hours</div>
+        <div class="sv" id="sAvgMin">0</div>
+        <div class="ss">min hours cal</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap" id="tableWrapper">
+      <div class="state-box">
+        <div class="state-icon">📂</div>
+        <div class="state-title">No data loaded</div>
+        <div class="state-sub">Upload an Excel file above.</div>
+      </div>
+    </div>
+
+    <div class="tbl-wrap" id="summaryWrapper" style="margin-top:20px; display:none">
+      <div class="state-box">
+        <div class="state-icon">🧾</div>
+        <div class="state-title">No summary yet</div>
+        <div class="state-sub">Upload an Excel file above to generate the summary.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Global state ──────────────────────────────────────────────────────────────
+    let allData = [];
+    let sheetCols = [];
+    let workbook = null;
+    let currentFiltered = [];
+    let viewMode = 'detail';
+
+    const requiredHeaders = ["Date", "Name", "Process", "UOM", "TAT / Hour", "Target", "Count", "Working Hours", "Notes", "Leave Report"];
+    const D_IDX = 0, N_IDX = 1, P_IDX = 2, TAT_IDX = 4, CNT_IDX = 6, WH_IDX = 7;
+
+    // ✅ Summary headers exactly like your 2nd image
+    const summaryHeaders = ["Name", "Date", "Working Hours", "Hours", "Productivity %", "Remarks", "Leave", "Traget Status", "Concatenate"];
+
+    // ── Helpers ───────────────────────────────────────────────────────────────────
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const pNum = v => { const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? null : n; };
+
+    const monthShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const fmtDate = d => {
+      if (!d) return '';
+      const day = d.getDate(); // no leading zero
+      const mon = monthShort[d.getMonth()];
+      const yr = d.getFullYear();
+      return `${day}-${mon}-${yr}`; // 2-Feb-2026
+    };
+
+    const isoDate = d => d ? d.toISOString().split('T')[0] : '';
+
+    // Round like Excel screenshot
+    const f1 = v => (v === null || v === undefined || isNaN(Number(v))) ? '—' : (Math.round(Number(v) * 10) / 10).toFixed(1);
+
+    // ✅ Round half up (1.4->1, 1.5->2)
+    const f0 = v => {
+      const n = Number(v);
+      if (v === null || v === undefined || isNaN(n)) return '—';
+      return String(Math.floor(n + 0.5));
+    };
+
+    function parseDate(v) {
+      if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+      if (typeof v === 'number') {
+        const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+        return isNaN(d.getTime()) ? null : d;
+      }
+      if (!v) return null;
+      const s = String(v).trim();
+      let d = new Date(s);
+      if (!isNaN(d.getTime()) && s.length > 5) return d;
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) {
+        d = new Date(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`);
+        if (!isNaN(d.getTime())) return d;
+      }
+      return null;
+    }
+
+    function matchCol(headers, aliases) {
+      for (const alias of aliases) {
+        const idx = headers.findIndex(h => h === alias || h.replace(/\s+/g, '') === alias.replace(/\s+/g, ''));
+        if (idx >= 0) return idx;
+      }
+      return -1;
+    }
+
+    function uniqJoin(arr) {
+      const out = [];
+      const seen = new Set();
+      for (const x of arr) {
+        const v = String(x || '').trim();
+        if (!v) continue;
+        if (seen.has(v)) continue;
+        seen.add(v);
+        out.push(v);
+      }
+      return out.join(', ');
+    }
+
+    // ✅ NEW: Determine divisor for Productivity % based on Remarks / Leave keywords
+    function getProductivityDivisor(remarksJoined, leaveJoined) {
+      const txt = `${String(remarksJoined || '')} ${String(leaveJoined || '')}`.toLowerCase();
+
+      if (txt.includes('half day leave') || txt.includes('session_01 leave') || txt.includes('session_02 leave')) return 4;
+      if (txt.includes('2 hr per morn') || txt.includes('2 hr per eve')) return 6;
+      if (txt.includes('1 hr per morn') || txt.includes('1 hr per eve')) return 7;
+
+      return 8;
+    }
+
+    // ── View Toggle ───────────────────────────────────────────────────────────────
+    function toggleSummaryView() {
+      if (!allData.length) return;
+
+      viewMode = (viewMode === 'detail') ? 'summary' : 'detail';
+
+      const btn = document.getElementById('btnSummaryNav');
+      const wrapDetail = document.getElementById('tableWrapper');
+      const wrapSummary = document.getElementById('summaryWrapper');
+
+      const btnDlTop = document.getElementById('btnSummaryDownload');
+      const btnDlFilters = document.getElementById('btnExportSummary2');
+      const btnFinal = document.getElementById('btnFinalDownload');
+
+      if (viewMode === 'summary') {
+        btn.classList.add('active');
+        btn.innerHTML = '📄 View Report Data';
+        wrapDetail.style.display = 'none';
+        wrapSummary.style.display = 'block';
+        btnDlTop.style.display = 'inline-flex';
+        btnDlFilters.style.display = 'inline-flex';
+        btnFinal.style.display = 'inline-flex';
+
+        const summaryRows = buildNameSummaryRows(currentFiltered);
+        renderNameSummaryTable(summaryRows);
+        wrapSummary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '🧾 Summary Report';
+        wrapDetail.style.display = 'block';
+        wrapSummary.style.display = 'none';
+        btnDlTop.style.display = 'none';
+        btnDlFilters.style.display = 'none';
+        btnFinal.style.display = 'none';
+        wrapDetail.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    // ── File Load ────────────────────────────────────────────────────────────────
+    function loadFromFile(input) {
+      const file = input.files[0];
+      if (!file) return;
+      document.getElementById('fileNameDisplay').textContent = '📄 ' + file.name;
+      hideError();
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        try { processWorkbook(e.target.result); }
+        catch (err) { showError(err.message); }
+      };
+      reader.onerror = () => showError('Failed to read file.');
+      reader.readAsArrayBuffer(file);
+    }
+
+    function processWorkbook(buf) {
+      workbook = XLSX.read(buf, { type: 'array', cellDates: true });
+      const sheets = workbook.SheetNames;
+      if (!sheets.length) { showError('No sheets found.'); return; }
+
+      const sel = document.getElementById('sheetSelect');
+      sel.innerHTML = sheets.map((s, i) => `<option value="${i}">${esc(s)}</option>`).join('');
+
+      let best = 0;
+      sheets.forEach((s, i) => { if (/report|daily|data|march|employee/i.test(s)) best = i; });
+      sel.value = best;
+      document.getElementById('sheetPicker').style.display = 'flex';
+      loadSheet();
+    }
+
+    function loadSheet() {
+      const idx = parseInt(document.getElementById('sheetSelect').value) || 0;
+      const ws = workbook.Sheets[workbook.SheetNames[idx]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+      parseAndRender(raw);
+    }
+
+    // ── Parse ────────────────────────────────────────────────────────────────────
+    function parseAndRender(rows) {
+      if (!rows || rows.length === 0) return showError('Sheet is empty');
+
+      let hIdx = -1;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        const r = rows[i].map(norm);
+        if (r.some(h => h === 'date') && r.some(h => h === 'name')) { hIdx = i; break; }
+      }
+      if (hIdx < 0) return showError('Cannot find header row with "Date" and "Name".');
+
+      const rawCols = rows[hIdx];
+      const normCols = rawCols.map(norm);
+
+      const mapOutToIn = [];
+      const requiredNorms = requiredHeaders.map(norm);
+
+      for (let i = 0; i < requiredNorms.length; i++) {
+        const rNorm = requiredNorms[i];
+        let foundIdx = -1;
+        if (rNorm === 'tat / hour') foundIdx = matchCol(normCols, ['tat / hour', 'tat/hour', 'tat per hour', 'tat']);
+        else if (rNorm === 'working hours') foundIdx = matchCol(normCols, ['working hours', 'duration', 'workinghours', 'work hours']);
+        else foundIdx = matchCol(normCols, [rNorm]);
+        mapOutToIn[i] = foundIdx;
+      }
+
+      sheetCols = requiredHeaders;
+      allData = [];
+
+      for (let i = hIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        if (!r.length || r.every(c => !String(c).trim())) continue;
+
+        const raw = {};
+        for (let c = 0; c < requiredHeaders.length; c++) {
+          const inIdx = mapOutToIn[c];
+          raw[c] = (inIdx >= 0 && r[inIdx] !== undefined) ? r[inIdx] : '';
+        }
+
+        const dateObj = parseDate(raw[D_IDX]);
+        const dateSort = isoDate(dateObj) || String(raw[D_IDX] || '');
+
+        const tatVal = pNum(raw[TAT_IDX]);
+        const cntVal = pNum(raw[CNT_IDX]);
+        const durVal = pNum(raw[WH_IDX]);
+
+        const countIsEmpty = (cntVal === null || cntVal === 0);
+        const tatIsEmpty = (tatVal === null || tatVal === 0);
+
+        let hours = null;
+        if (countIsEmpty || tatIsEmpty) hours = durVal;
+        else hours = cntVal / tatVal;
+
+        let minHours = null;
+        if (hours !== null && durVal !== null) minHours = Math.min(hours, durVal);
+        else if (hours !== null) minHours = hours;
+        else if (durVal !== null) minHours = durVal;
+
+        if (!String(raw[N_IDX] || '').trim() && !dateSort) continue;
+
+        allData.push({ raw, dateObj, dateSort, __hours: hours, __minHours: minHours });
+      }
+
+      if (!allData.length) return showError('No valid data rows found after header.');
+
+      document.getElementById('btnSummaryNav').disabled = false;
+
+      populateFilters();
+      applyFilters();
+
+      document.getElementById('filtersBar').style.display = 'flex';
+      document.getElementById('statsRow').style.display = 'grid';
+
+      viewMode = 'detail';
+      document.getElementById('btnSummaryNav').classList.remove('active');
+      document.getElementById('btnSummaryNav').innerHTML = '🧾 Summary Report';
+      document.getElementById('tableWrapper').style.display = 'block';
+      document.getElementById('summaryWrapper').style.display = 'none';
+      document.getElementById('btnSummaryDownload').style.display = 'none';
+      document.getElementById('btnExportSummary2').style.display = 'none';
+      document.getElementById('btnFinalDownload').style.display = 'none';
+    }
+
+    // ── Filters ───────────────────────────────────────────────────────────────────
+    function populateFilters() {
+      const names = [...new Set(allData.map(d => String(d.raw[N_IDX] || '').trim()))].filter(Boolean).sort();
+      const procs = [...new Set(allData.map(d => String(d.raw[P_IDX] || '').trim()))].filter(Boolean).sort();
+      const dates = allData.map(d => d.dateSort).filter(Boolean).sort();
+
+      document.getElementById('fName').innerHTML = '<option value="">All</option>' + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+      document.getElementById('fProcess').innerHTML = '<option value="">All</option>' + procs.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+
+      if (dates.length) {
+        document.getElementById('fFrom').value = dates[0];
+        document.getElementById('fTo').value = dates[dates.length - 1];
+      }
+    }
+
+    function applyFilters() {
+      const nameFilter = document.getElementById('fName').value;
+      const from = document.getElementById('fFrom').value;
+      const to = document.getElementById('fTo').value;
+      const processFilter = document.getElementById('fProcess').value;
+
+      const fd = allData.filter(d => {
+        if (nameFilter && String(d.raw[N_IDX] || '').trim() !== nameFilter) return false;
+        if (processFilter && String(d.raw[P_IDX] || '').trim() !== processFilter) return false;
+        if (from && d.dateSort < from) return false;
+        if (to && d.dateSort > to) return false;
+        return true;
+      }).sort((a, b) => a.dateSort.localeCompare(b.dateSort));
+
+      currentFiltered = fd;
+      updateStats(fd);
+
+      if (viewMode === 'summary') {
+        const summaryRows = buildNameSummaryRows(fd);
+        renderNameSummaryTable(summaryRows);
+      } else {
+        renderTable(fd);
+      }
+    }
+
+    function clearFilters() {
+      document.getElementById('fName').value = '';
+      document.getElementById('fProcess').value = '';
+      const dates = allData.map(d => d.dateSort).filter(Boolean).sort();
+      if (dates.length) {
+        document.getElementById('fFrom').value = dates[0];
+        document.getElementById('fTo').value = dates[dates.length - 1];
+      }
+      applyFilters();
+    }
+
+    // ── Stats (simple) ────────────────────────────────────────────────────────────
+    function updateStats(data) {
+      document.getElementById('sTotal').textContent = data.length.toLocaleString();
+      document.getElementById('sEmp').textContent = new Set(data.map(d => d.raw[N_IDX])).size;
+
+      const totalCount = data.reduce((s, d) => s + (pNum(d.raw[CNT_IDX]) || 0), 0);
+      document.getElementById('sCount').textContent = totalCount.toLocaleString();
+
+      const hArr = data.map(d => d.__hours).filter(v => v !== null && v !== undefined);
+      const mArr = data.map(d => d.__minHours).filter(v => v !== null && v !== undefined);
+
+      const avgH = hArr.length ? (hArr.reduce((a, b) => a + b, 0) / hArr.length) : null;
+      const avgM = mArr.length ? (mArr.reduce((a, b) => a + b, 0) / mArr.length) : null;
+
+      document.getElementById('sAvgH').textContent = avgH === null ? '—' : f1(avgH);
+      document.getElementById('sAvgMin').textContent = avgM === null ? '—' : f1(avgM);
+    }
+
+    // ── Detail Table ─────────────────────────────────────────────────────────────
+    function renderTable(data) {
+      const w = document.getElementById('tableWrapper');
+
+      if (!data.length) {
+        w.innerHTML = `<div class="state-box"><div class="state-icon">🔍</div><div class="state-title">No records</div><div class="state-sub">Adjust filters.</div></div>`;
+        return;
+      }
+
+      const grpRow = `<tr class="grp-row">
+        <th class="grp-sheet" colspan="${sheetCols.length}">Sheet Data</th>
+        <th class="grp-calc" colspan="2">Calculated</th>
+      </tr>`;
+
+      const colRow = `<tr class="col-row">
+        ${sheetCols.map(h => `<th>${esc(h)}</th>`).join('')}
+        <th>Hours</th>
+        <th>Min Hours Cal</th>
+      </tr>`;
+
+      let body = '';
+      let lastDate = '';
+
+      data.forEach(row => {
+        if (row.dateSort !== lastDate) {
+          lastDate = row.dateSort;
+          const label = row.dateObj ? fmtDate(row.dateObj) : row.dateSort;
+          body += `<tr class="date-sep"><td colspan="${sheetCols.length + 2}">📅 &nbsp;${esc(label)}</td></tr>`;
+        }
+
+        const cells = sheetCols.map((_, ci) => {
+          if (ci === D_IDX) return `<td>${esc(row.dateObj ? fmtDate(row.dateObj) : String(row.raw[ci] || ''))}</td>`;
+          if (ci === P_IDX) return `<td class="process-col">${esc(String(row.raw[ci] || '').trim()) || '—'}</td>`;
+          return `<td>${esc(String(row.raw[ci] || '').trim()) || '—'}</td>`;
+        }).join('');
+
+        const hVal = row.__hours === null || row.__hours === undefined ? '—' : f1(row.__hours);
+        const mVal = row.__minHours === null || row.__minHours === undefined ? '—' : f1(row.__minHours);
+
+        body += `<tr>${cells}<td class="calc">${hVal}</td><td class="calc">${mVal}</td></tr>`;
+      });
+
+      w.innerHTML = `
+        <div class="tbl-top">
+          <div class="tbl-title">Report Data <span class="rec-count">${data.length} records</span></div>
+          <div class="formula-note">
+            <span>Hours</span> = Count ÷ TAT/Hour (or Working Hours) ·
+            <span>Min Hours Cal</span> = Min(Hours, Working Hours)
+          </div>
+        </div>
+        <div class="tbl-scroll">
+          <table>
+            <thead>${grpRow}${colRow}</thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── ✅ Summary rows per (Name + Date) ─────────────────────────────────────────
+    function buildNameSummaryRows(filteredRows) {
+      const byName = new Map();
+
+      filteredRows.forEach(d => {
+        const name = String(d.raw[N_IDX] || '').trim();
+        if (!name) return;
+
+        const dateKey = d.dateSort || '';
+        if (!dateKey) return;
+
+        if (!byName.has(name)) byName.set(name, new Map());
+        const byDate = byName.get(name);
+
+        if (!byDate.has(dateKey)) {
+          byDate.set(dateKey, {
+            name,
+            dateSort: dateKey,
+            dateObj: d.dateObj,
+            whSum: 0,
+            hoursSum: 0,
+            remarks: [],
+            leave: []
+          });
+        }
+
+        const g = byDate.get(dateKey);
+
+        g.whSum += (pNum(d.raw[WH_IDX]) || 0);
+
+        const mh = (d.__minHours === null || d.__minHours === undefined) ? 0 : (Number(d.__minHours) || 0);
+        g.hoursSum += mh;
+
+        const note = String(d.raw[8] || '').trim();
+        if (note) g.remarks.push(note);
+
+        const lv = String(d.raw[9] || '').trim();
+        if (lv) g.leave.push(lv);
+      });
+
+      const out = [];
+      const names = Array.from(byName.keys()).sort((a, b) => a.localeCompare(b));
+
+      names.forEach(name => {
+        const byDate = byName.get(name);
+        const dates = Array.from(byDate.keys()).sort();
+
+        dates.forEach(dateKey => {
+          const g = byDate.get(dateKey);
+
+          const remarksJoined = uniqJoin(g.remarks);
+          const leaveJoined = uniqJoin(g.leave);
+
+          const divisor = getProductivityDivisor(remarksJoined, leaveJoined);
+
+          const productivity = g.hoursSum ? (g.hoursSum * 100 / divisor) : 0;
+
+          let targetStatus = '';
+          if (productivity !== 0 && productivity < 100) targetStatus = 'Target not achieved';
+
+          const concatenate = [remarksJoined, leaveJoined, targetStatus].filter(Boolean).join(', ');
+
+          out.push({
+            name: g.name,
+            dateSort: g.dateSort,
+            dateDisplay: (g.dateObj ? fmtDate(g.dateObj) : g.dateSort),
+            whSum: g.whSum,
+            hoursSum: g.hoursSum,
+            productivity,
+            remarks: remarksJoined,
+            leave: leaveJoined,
+            targetStatus,
+            concatenate,
+            __divisor: divisor
+          });
+        });
+      });
+
+      return out;
+    }
+
+    // ── ✅ Summary table render ───────────────────────────────────────────────────
+    function renderNameSummaryTable(summaryRows) {
+      const w = document.getElementById('summaryWrapper');
+
+      if (!summaryRows || !summaryRows.length) {
+        w.innerHTML = `<div class="state-box">
+          <div class="state-icon">🧾</div>
+          <div class="state-title">No summary records</div>
+          <div class="state-sub">Adjust filters or check your sheet data.</div>
+        </div>`;
+        return;
+      }
+
+      const grpRow = `<tr class="grp-row">
+        <th class="grp-sheet" colspan="${summaryHeaders.length}">Summary Report</th>
+      </tr>`;
+
+      const colRow = `<tr class="col-row">` +
+        summaryHeaders.map(h => `<th style="white-space:nowrap">${esc(h)}</th>`).join('') +
+        `</tr>`;
+
+      let body = '';
+      summaryRows.forEach(r => {
+        body += `<tr>
+          <td>${esc(r.name)}</td>
+          <td>${esc(r.dateDisplay) || '—'}</td>
+          <td class="num">${f1(r.whSum)}</td>
+          <td class="calc">${f1(r.hoursSum)}</td>
+          <td class="num">${f0(r.productivity)}</td>
+          <td class="process-col">${esc(r.remarks) || ''}</td>
+          <td class="process-col">${esc(r.leave) || ''}</td>
+          <td>${esc(r.targetStatus) || ''}</td>
+          <td class="process-col">${esc(r.concatenate) || ''}</td>
+        </tr>`;
+      });
+
+      w.innerHTML = `
+        <div class="tbl-top">
+          <div class="tbl-title">Summary Report <span class="rec-count">${summaryRows.length} records</span></div>
+          <div class="formula-note">
+            <span>Working Hours</span> = Sum(Working Hours per day) ·
+            <span>Hours</span> = Sum(Min Hours Cal per day) ·
+            <span>Productivity %</span> = Hours × 100 ÷ divisor (8/7/6/4 based on Remarks/Leave)
+          </div>
+        </div>
+        <div class="tbl-scroll">
+          <table>
+            <thead>${grpRow}${colRow}</thead>
+            <tbody>${body}</tbody>
+          </table>
+        </div>`;
+    }
+
+    // ── ✅ Export Summary CSV ─────────────────────────────────────────────────────
+    function exportSummaryCSV(summaryRows) {
+      if (!summaryRows || !summaryRows.length) {
+        showError('No summary rows to export (check filters).');
+        return;
+      }
+
+      const header = summaryHeaders;
+      const rows = summaryRows.map(r => {
+        const vals = [
+          r.name || '',
+          r.dateDisplay || '',
+          (r.whSum == null ? '' : (Math.round(Number(r.whSum) * 10) / 10).toFixed(1)),
+          (r.hoursSum == null ? '' : (Math.round(Number(r.hoursSum) * 10) / 10).toFixed(1)),
+          (r.productivity == null ? '' : String(Math.floor(Number(r.productivity) + 0.5))),
+          r.remarks || '',
+          r.leave || '',
+          r.targetStatus || '',
+          r.concatenate || ''
+        ].map(v => String(v).replace(/"/g, '""'));
+        return vals.map(v => `"${v}"`).join(',');
+      });
+
+      const csv = [header.map(v => `"${v}"`).join(','), ...rows].join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `summary_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    // ── ✅ FINAL REPORT (NEW) ─────────────────────────────────────────────────────
+    const finalHeaders = [
+      "Date", "Name", "Working Hours", "Productivity %", "Average of Productivity",
+      "Remarks", "Quality(100%)", "Working days", "Late Login", "Leave", "Permission",
+      "No. of Process Worked", "Name of process worked", "Notes", "Errors %", "Floor Ethics %",
+      "Login", "Leave"
+    ];
+
+    function buildFinalReportRows(filteredRows) {
+      const summaryRows = buildNameSummaryRows(filteredRows);
+
+      // Name -> productivity array (exclude 0 for average)
+      const prodByName = new Map();
+      // Name -> working days count (productivity > 0)
+      const workingDaysByName = new Map();
+
+      summaryRows.forEach(r => {
+        const name = String(r.name || '').trim();
+        if (!name) return;
+
+        const prod = Number(r.productivity) || 0;
+
+        if (!prodByName.has(name)) prodByName.set(name, []);
+        if (prod > 0) prodByName.get(name).push(prod);
+
+        if (!workingDaysByName.has(name)) workingDaysByName.set(name, new Set());
+        if (prod > 0 && r.dateSort) workingDaysByName.get(name).add(r.dateSort);
+      });
+
+      // (Name|DateSort) -> Set(process)
+      const procMap = new Map();
+      filteredRows.forEach(d => {
+        const name = String(d.raw[N_IDX] || '').trim();
+        const dateKey = d.dateSort || '';
+        const proc = String(d.raw[P_IDX] || '').trim();
+        if (!name || !dateKey || !proc) return;
+
+        const k = `${name}|||${dateKey}`;
+        if (!procMap.has(k)) procMap.set(k, new Set());
+        procMap.get(k).add(proc);
+      });
+
+      return summaryRows.map(r => {
+        const name = String(r.name || '').trim();
+        const prodList = prodByName.get(name) || [];
+        const avgProd = prodList.length ? (prodList.reduce((a, b) => a + b, 0) / prodList.length) : 0;
+
+        const workingDays = workingDaysByName.get(name) ? workingDaysByName.get(name).size : 0;
+
+        const k = `${name}|||${r.dateSort}`;
+        const procSet = procMap.get(k) || new Set();
+        const procList = Array.from(procSet).sort();
+
+        return {
+          Date: r.dateDisplay || '',
+          Name: name,
+          WorkingHours: r.whSum ?? '',
+          Productivity: r.productivity ?? '',
+          AvgProductivity: avgProd,
+          Remarks: r.concatenate || '',
+          Quality: "100%",
+          WorkingDays: workingDays,
+          LateLogin: "",
+          Leave: r.leave || "",
+          Permission: "",
+          NoProcessWorked: procList.length,
+          NameProcessWorked: procList.join(", "),
+          Notes: "",
+          Errors: "",
+          FloorEthics: "",
+          Login: "",
+          Leave2: ""
+        };
+      });
+    }
+
+    function exportFinalCSV(rows) {
+      if (!rows || !rows.length) {
+        showError('No final report rows to export (check filters).');
+        return;
+      }
+
+      const csvRows = rows.map(r => {
+        const wh = (r.WorkingHours === '' ? '' : (Math.round(Number(r.WorkingHours) * 10) / 10).toFixed(1));
+        const prod = (r.Productivity === '' ? '' : String(Math.floor(Number(r.Productivity) + 0.5)));
+        const avg = (r.AvgProductivity === '' ? '' : String(Math.floor(Number(r.AvgProductivity) + 0.5)));
+
+        const vals = [
+          r.Date || "",
+          r.Name || "",
+          wh,
+          prod,
+          avg,
+          r.Remarks || "",
+          r.Quality || "",
+          String(r.WorkingDays ?? ""),
+          r.LateLogin || "",
+          r.Leave || "",
+          r.Permission || "",
+          String(r.NoProcessWorked ?? ""),
+          r.NameProcessWorked || "",
+          r.Notes || "",
+          r.Errors || "",
+          r.FloorEthics || "",
+          r.Login || "",
+          r.Leave2 || ""
+        ].map(v => String(v).replace(/"/g, '""'));
+
+        return vals.map(v => `"${v}"`).join(',');
+      });
+
+      const csv = [finalHeaders.map(v => `"${v}"`).join(','), ...csvRows].join('\n');
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `final_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    // ── Export CSV (Detail) ───────────────────────────────────────────────────────
+    function exportCSV() {
+      const h = [...sheetCols, 'Hours', 'Min Hours Cal'];
+      const rows = allData.map(d => {
+        const vals = sheetCols.map((_, ci) => String(d.raw[ci] || '').replace(/"/g, '""'));
+        vals.push(d.__hours !== null && d.__hours !== undefined ? d.__hours.toFixed(4) : '');
+        vals.push(d.__minHours !== null && d.__minHours !== undefined ? d.__minHours.toFixed(4) : '');
+        return vals.map(v => `"${v}"`).join(',');
+      });
+      const csv = [h.map(v => `"${v}"`).join(','), ...rows].join('\n');
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      a.download = `employee_report_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────────
+    function showError(msg) {
+      const b = document.getElementById('errorBox');
+      document.getElementById('errorMsg').textContent = msg;
+      b.style.display = 'flex';
+    }
+
+    function hideError() {
+      document.getElementById('errorBox').style.display = 'none';
+    }
+  </script>
+</body>
+
+</html>
